@@ -46,7 +46,7 @@ export default function EmpleadoDashboard() {
 
     const asigQ = query(collection(db, 'asignaciones'), where('empleado_id', '==', uid))
     const asigSnap = await getDocs(asigQ)
-    const asigData = asigSnap.docs.map(d => ({ id: d.id, ...d.data() }))
+    const asigData = asigSnap.docs.map(d => ({ id: d.id, ...d.data() })) as any[]
     setAsignaciones(asigData)
 
     const cursosData = await Promise.all(
