@@ -18,7 +18,7 @@ export default function SeleccionarRol() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
+    <div className="min-h-screen flex items-center justify-center" style={{ backgroundImage: "url('/fondo_rol.png')", backgroundSize: 'cover', backgroundPosition: 'center' }}>
       <div className="bg-white p-10 rounded-2xl shadow-md w-full max-w-sm flex flex-col items-center gap-8">
         <div className="text-center">
           <h1 className="text-2xl font-semibold text-gray-800">¿Cómo ingresas?</h1>

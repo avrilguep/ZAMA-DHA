@@ -137,7 +137,7 @@ export default function LoginPage() {
   if (!mounted) return null
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
+    <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: '#eaf2ff' }}>
       <div className="bg-white p-8 rounded-2xl shadow-md w-full max-w-sm flex flex-col gap-5">
         <div>
           <h1 className="text-2xl font-semibold text-gray-800">
