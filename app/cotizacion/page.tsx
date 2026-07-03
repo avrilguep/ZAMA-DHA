@@ -97,7 +97,7 @@ export default function Cotizacion() {
   )
 
   if (folio) return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
+    <div className="min-h-screen flex items-center justify-center bg-gray-50"  style={{ backgroundImage: "url('/fondo_inicio.png')", backgroundSize: 'cover', backgroundPosition: 'center', backgroundRepeat: 'no-repeat' }}>
       <div className="bg-white rounded-2xl shadow-md p-10 max-w-md w-full flex flex-col items-center gap-6 text-center">
         <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center">
           <span className="text-green-600 text-3xl">✓</span>
@@ -122,9 +122,9 @@ export default function Cotizacion() {
   )
 
   return (
-    <div className="min-h-screen bg-gray-50 py-12 px-6">
+    <div className="min-h-screen bg-gray-50 py-12 px-6" style={{ backgroundImage: "url('/fondo_inicio.png')", backgroundSize: 'cover', backgroundPosition: 'center', backgroundRepeat: 'no-repeat' }}>
       <div className="max-w-2xl mx-auto">
-        <button onClick={() => router.push('/')} className="text-sm text-gray-400 hover:text-gray-600 mb-6 block">
+        <button onClick={() => router.push('/')} className="text-sm text-BLACK hover:text-gray-400 mb-6 block">
           ← Volver
         </button>
 
@@ -142,7 +142,7 @@ export default function Cotizacion() {
               {campo('Nombre de la empresa *', 'empresa', 'text', 'Ej. Empresa SA de CV')}
               {campo('Nombre del responsable *', 'nombre', 'text', 'Tu nombre completo')}
               {campo('Correo electrónico *', 'correo', 'email', 'correo@empresa.com')}
-              {campo('Teléfono *', 'telefono', 'text', '10 dígitos')}
+              {campo('Teléfono *', 'telefono', 'number', '10 dígitos')}
               {campo('Giro de la empresa *', 'giro', 'text', 'Ej. Manufactura, Servicios, etc.')}
             </div>
 
