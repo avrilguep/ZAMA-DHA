@@ -44,15 +44,3 @@ body {
   }
 }
 
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
-
-main {
-  animation: fadeIn 0.7s ease-out forwards;
-}

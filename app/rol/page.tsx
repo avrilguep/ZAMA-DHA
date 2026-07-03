@@ -7,15 +7,22 @@ export default function SeleccionarRol() {
   const router = useRouter()
 
   useEffect(() => {
-    if (!sessionStorage.getItem('acceso')) {
-      router.push('/')
-    }
-  }, [])
+  const acceso = localStorage.getItem('acceso_fecha')
+  if (!acceso) {
+    router.push('/')
+    return
+  }
+  const diasPasados = (new Date().getTime() - new Date(acceso).getTime()) / (1000 * 60 * 60 * 24)
+  if (diasPasados >= 6) {
+    localStorage.removeItem('acceso_fecha')
+    router.push('/')
+  }
+}, [])
 
   function elegir(rol: string) {
-    sessionStorage.setItem('rol', rol)
-    router.push('/login')
-  }
+  sessionStorage.setItem('rol', rol)
+  router.push('/login')
+}
 
   return (
     <div className="min-h-screen flex items-center justify-center" style={{ backgroundImage: "url('/fondo_rol.png')", backgroundSize: 'cover', backgroundPosition: 'center' }}>
