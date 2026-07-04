@@ -4,6 +4,8 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { auth, db } from '@/lib/firebase'
 import { onAuthStateChanged } from 'firebase/auth'
+import CapacitacionModule from './CapacitacionModule'
+
 import {
   doc, getDoc, collection, query, where,
   getDocs, addDoc, deleteDoc, updateDoc
@@ -17,7 +19,7 @@ export default function EmpresaDashboard() {
   const [invitados, setInvitados] = useState<any[]>([])
   const [cursos, setCursos] = useState<any[]>([])
   const [asignaciones, setAsignaciones] = useState<any[]>([])
-  const [seccion, setSeccion] = useState<'inicio' | 'empleados' | 'cursos' | 'reportes'>('inicio')
+  const [seccion, setSeccion] = useState<'inicio' | 'empleados' | 'cursos' | 'reportes' | 'capacitacion'>('inicio')
   const [loading, setLoading] = useState(true)
   const [userId, setUserId] = useState('')
   const [resultadosEval, setResultadosEval] = useState<Record<string, any[]>>({})
@@ -472,19 +474,23 @@ async function descargarReportePorEmpleado() {
 
       <div className="max-w-4xl mx-auto px-6 py-8">
         <div className="flex gap-2 mb-8">
-          {(['inicio', 'empleados', 'cursos', 'reportes'] as const).map(tab => (
+          {(['inicio', 'empleados', 'cursos', 'reportes', 'capacitacion'] as const).map(tab => (
             <button
-                key={tab}
-                onClick={() => setSeccion(tab)}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
+              key={tab}
+              onClick={() => setSeccion(tab)}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
                 seccion === tab
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'
-                }`}
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'
+              }`}
             >
-                {tab === 'inicio' ? 'Inicio' : tab === 'empleados' ? 'Empleados' : tab === 'cursos' ? 'Cursos' : 'Reportes'}
+              {tab === 'inicio' ? 'Inicio' 
+                : tab === 'empleados' ? 'Empleados' 
+                : tab === 'cursos' ? 'Cursos' 
+                : tab === 'reportes' ? 'Reportes'
+                : 'Capacitación'}
             </button>
-            ))}
+          ))}
         </div>
 
         {/* INICIO */}
@@ -981,50 +987,58 @@ async function descargarReportePorEmpleado() {
       </div>
 
       {seccion === 'reportes' && (
-  <div className="flex flex-col gap-6">
-    <h2 className="text-xl font-semibold text-gray-800">Reportes</h2>
+        <div className="flex flex-col gap-6">
+          <h2 className="text-xl font-semibold text-gray-800">Reportes</h2>
 
-    <div className="grid grid-cols-2 gap-4">
-      <div className="bg-white rounded-xl p-6 border border-gray-200 flex flex-col gap-3">
-        <div>
-          <p className="font-medium text-gray-800">Reporte por curso</p>
-          <p className="text-sm text-gray-400 mt-1">
-            Muestra qué empleados completaron cada curso y sus resultados de evaluación.
-          </p>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="bg-white rounded-xl p-6 border border-gray-200 flex flex-col gap-3">
+              <div>
+                <p className="font-medium text-gray-800">Reporte por curso</p>
+                <p className="text-sm text-gray-400 mt-1">
+                  Muestra qué empleados completaron cada curso y sus resultados de evaluación.
+                </p>
+              </div>
+              <button
+                onClick={descargarReportePorCurso}
+                disabled={cursos.length === 0}
+                className="mt-auto bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50 transition"
+              >
+                Descargar PDF
+              </button>
+            </div>
+
+            <div className="bg-white rounded-xl p-6 border border-gray-200 flex flex-col gap-3">
+              <div>
+                <p className="font-medium text-gray-800">Reporte por empleado</p>
+                <p className="text-sm text-gray-400 mt-1">
+                  Muestra todos los cursos de cada empleado, su estado y resultados.
+                </p>
+              </div>
+              <button
+                onClick={descargarReportePorEmpleado}
+                disabled={empleados.length === 0}
+                className="mt-auto bg-teal-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-teal-700 disabled:opacity-50 transition"
+              >
+                Descargar PDF
+              </button>
+            </div>
+          </div>
+
+          {(cursos.length === 0 || empleados.length === 0) && (
+            <p className="text-sm text-gray-400 text-center">
+              Necesitas al menos un curso y un empleado para generar reportes.
+            </p>
+          )}
+          
         </div>
-        <button
-          onClick={descargarReportePorCurso}
-          disabled={cursos.length === 0}
-          className="mt-auto bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50 transition"
-        >
-          Descargar PDF
-        </button>
-      </div>
+      )}
 
-      <div className="bg-white rounded-xl p-6 border border-gray-200 flex flex-col gap-3">
-        <div>
-          <p className="font-medium text-gray-800">Reporte por empleado</p>
-          <p className="text-sm text-gray-400 mt-1">
-            Muestra todos los cursos de cada empleado, su estado y resultados.
-          </p>
-        </div>
-        <button
-          onClick={descargarReportePorEmpleado}
-          disabled={empleados.length === 0}
-          className="mt-auto bg-teal-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-teal-700 disabled:opacity-50 transition"
-        >
-          Descargar PDF
-        </button>
-      </div>
-    </div>
+      {/* CAPACITACIÓN */}
+        {seccion === 'capacitacion' && (
+          <CapacitacionModule empresaId={userId} empleados={empleados} />
+        )}
 
-    {(cursos.length === 0 || empleados.length === 0) && (
-      <p className="text-sm text-gray-400 text-center">
-        Necesitas al menos un curso y un empleado para generar reportes.
-      </p>
-    )}
-  </div>
-)}
+
     </div>
   )
 }

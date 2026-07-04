@@ -200,6 +200,17 @@ export default function LoginPage() {
           </button>
         </p>
 
+        <p className="text-xs text-center text-gray-400">
+          Al registrarte aceptas nuestro{' '}
+          <a 
+            href="/privacidad" 
+            onClick={() => sessionStorage.setItem('privacidad_origen', 'login')}
+            className="text-blue-600 hover:underline"
+          >
+            Aviso de Privacidad
+          </a>
+        </p>
+
         <button
           onClick={() => router.push('/rol')}
           className="text-xs text-gray-400 hover:text-gray-600 text-center transition"
