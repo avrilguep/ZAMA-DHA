@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import './inicio.css'
 
-const CLAVE = 'ZAMADHA2026'
+const CLAVE = process.env.NEXT_PUBLIC_CLAVE_ACCESO || ''
 const DIAS_VALIDO = 6
 
 const planes = [
