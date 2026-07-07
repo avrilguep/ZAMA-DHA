@@ -19,7 +19,7 @@ export default function EmpresaDashboard() {
   const [invitados, setInvitados] = useState<any[]>([])
   const [cursos, setCursos] = useState<any[]>([])
   const [asignaciones, setAsignaciones] = useState<any[]>([])
-  const [seccion, setSeccion] = useState<'inicio' | 'empleados' | 'cursos' | 'reportes' | 'capacitacion'>('inicio')
+  const [seccion, setSeccion] = useState<'inicio' | 'empleados' | 'capacitacion' | 'reportes'>('inicio')
   const [loading, setLoading] = useState(true)
   const [userId, setUserId] = useState('')
   const [resultadosEval, setResultadosEval] = useState<Record<string, any[]>>({})
@@ -40,6 +40,8 @@ export default function EmpresaDashboard() {
   const [agregandoEmp, setAgregandoEmp] = useState(false)
   const [mostrarFormEmp, setMostrarFormEmp] = useState(false)
   const [errorEmp, setErrorEmp] = useState('')
+
+  const [capacitacionesEmpresa, setCapacitacionesEmpresa] = useState<any[]>([])
 
   const router = useRouter()
 
@@ -87,36 +89,38 @@ async function descargarReportePorCurso() {
 
   let y = 40
 
-  for (const curso of cursos) {
+  for (const curso of capacitacionesEmpresa) {
     const asigCurso = asignaciones.filter(a => a.curso_id === curso.id)
     const total = asigCurso.length
     const completaron = asigCurso.filter(a => a.completado).length
     const pct = total > 0 ? Math.round((completaron / total) * 100) : 0
-
     // Fondo gris para título del curso
     pdf.setFillColor(243, 244, 246)
     pdf.rect(14, y - 4, 182, 14, 'F')
 
-    pdf.setFontSize(12)
+    pdf.setFontSize(13)
     pdf.setTextColor(15, 23, 42)
     pdf.setFont('helvetica', 'bold')
-    pdf.text(`${curso.titulo}`, 16, y + 4)
+    pdf.text(`Capacitación: ${curso.nombre || curso.titulo}`, 14, y)
 
     pdf.setFontSize(9)
     pdf.setFont('helvetica', 'normal')
     pdf.setTextColor(100, 116, 139)
     pdf.text(`Progreso: ${pct}% · ${completaron}/${total} empleados completaron`, 16, y + 10)
 
-    const rows = asigCurso.map(a => {
-      const emp = empleados.find(e => e.id === a.empleado_id)
-      const res = resultadosEval[curso.id]?.find((r: any) => r.empleado_id === a.empleado_id)
-      return [
-        emp?.nombre || 'Desconocido',
-        emp?.departamento || 'Sin depto.',
-        a.completado ? 'Completado' : 'Pendiente',
-        res ? `${res.porcentaje}% (${res.aprobado ? 'Aprobado' : 'No aprobado'})` : 'Sin evaluación'
-      ]
-    })
+    const rows: string[][] = asigCurso
+      .map(a => {
+        const emp = empleados.find(e => e.id === a.empleado_id)
+        const res = resultadosEval[curso.id]?.find((r: any) => r.empleado_id === a.empleado_id)
+        if (!emp) return null
+        return [
+          emp.nombre,
+          emp.departamento || 'Sin depto.',
+          a.completado ? 'Completado' : 'Pendiente',
+          res ? `${res.porcentaje}% (${res.aprobado ? 'Aprobado' : 'No aprobado'})` : 'Sin evaluación'
+        ]
+      })
+      .filter((r): r is string[] => r !== null)
 
     autoTable(pdf, {
       startY: y + 14,
@@ -210,20 +214,23 @@ async function descargarReportePorEmpleado() {
     pdf.text(`${emp.departamento || 'Sin departamento'} · ${emp.email}`, 16, y + 10)
     pdf.text(`Cursos completados: ${completaron}/${asigEmp.length}`, 16, y + 15)
 
-    const rows = asigEmp.map(a => {
-      const curso = cursos.find(c => c.id === a.curso_id)
+    const rows: string[][] = asigEmp
+    .map(a => {
+      const curso = capacitacionesEmpresa.find(c => c.id === a.curso_id)
       const res = resultadosEval[a.curso_id]?.find((r: any) => r.empleado_id === emp.id)
+      if (!curso) return null
       return [
-        curso?.titulo || 'Desconocido',
+        curso.nombre || curso.titulo,
         a.completado ? 'Completado' : 'Pendiente',
         res ? `${res.porcentaje}% (${res.aprobado ? 'Aprobado' : 'No aprobado'})` : 'Sin evaluación'
       ]
     })
+    .filter((r): r is string[] => r !== null)
 
     autoTable(pdf, {
       startY: y + 18,
       head: [['Curso', 'Estado', 'Evaluación']],
-      body: rows,
+      body: rows.filter(Boolean),
       theme: 'striped',
       headStyles: { fillColor: [13, 148, 136], fontSize: 9, fontStyle: 'bold' },
       bodyStyles: { fontSize: 9 },
@@ -283,16 +290,21 @@ async function descargarReportePorEmpleado() {
     })
     setEvaluaciones(evalMap)
 
+    const capQ = query(collection(db, 'capacitaciones'), where('empresa_id', '==', uid))
+    const capSnap = await getDocs(capQ)
+    const capData = capSnap.docs.map(d => ({ id: d.id, ...d.data() }))
+    setCapacitacionesEmpresa(capData)
+
     const resEvalMap: Record<string, any[]> = {}
-    for (const curso of curSnap.docs) {
-    const resQ = query(
+    for (const cap of capData) {
+      const resQ = query(
         collection(db, 'resultados_evaluacion'),
-        where('curso_id', '==', curso.id)
-    )
-    const resSnap = await getDocs(resQ)
-    if (!resSnap.empty) {
-        resEvalMap[curso.id] = resSnap.docs.map(d => ({ id: d.id, ...d.data() }))
-    }
+        where('curso_id', '==', cap.id)
+      )
+      const resSnap = await getDocs(resQ)
+      if (!resSnap.empty) {
+        resEvalMap[cap.id] = resSnap.docs.map(d => ({ id: d.id, ...d.data() }))
+      }
     }
     setResultadosEval(resEvalMap)
 
@@ -474,23 +486,22 @@ async function descargarReportePorEmpleado() {
 
       <div className="max-w-4xl mx-auto px-6 py-8">
         <div className="flex gap-2 mb-8">
-          {(['inicio', 'empleados', 'cursos', 'reportes', 'capacitacion'] as const).map(tab => (
-            <button
-              key={tab}
-              onClick={() => setSeccion(tab)}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
-                seccion === tab
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'
-              }`}
-            >
-              {tab === 'inicio' ? 'Inicio' 
-                : tab === 'empleados' ? 'Empleados' 
-                : tab === 'cursos' ? 'Cursos' 
-                : tab === 'reportes' ? 'Reportes'
-                : 'Capacitación'}
-            </button>
-          ))}
+          {(['inicio', 'empleados', 'capacitacion', 'reportes'] as const).map(tab => (
+          <button
+            key={tab}
+            onClick={() => setSeccion(tab)}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
+              seccion === tab
+                ? 'bg-blue-600 text-white'
+                : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'
+            }`}
+          >
+            {tab === 'inicio' ? 'Inicio'
+              : tab === 'empleados' ? 'Empleados'
+              : tab === 'reportes' ? 'Reportes'
+              : 'Capacitación'}
+          </button>
+        ))}
         </div>
 
         {/* INICIO */}
@@ -505,8 +516,8 @@ async function descargarReportePorEmpleado() {
         <p className="text-3xl font-semibold text-gray-800 mt-1">{empleados.length}</p>
       </div>
       <div className="bg-white rounded-xl p-5 border border-gray-200">
-        <p className="text-sm text-gray-500">Cursos activos</p>
-        <p className="text-3xl font-semibold text-gray-800 mt-1">{cursos.length}</p>
+        <p className="text-sm text-gray-500">Capacitaciones activas</p>
+        <p className="text-3xl font-semibold text-gray-800 mt-1">{capacitacionesEmpresa.length}</p>
       </div>
       <div className="bg-white rounded-xl p-5 border border-gray-200">
         <p className="text-sm text-gray-500">Asignaciones</p>
@@ -515,16 +526,16 @@ async function descargarReportePorEmpleado() {
     </div>
 
     {/* Estadísticas por curso */}
-    {cursos.length === 0 ? (
-      <div className="bg-white rounded-xl p-8 border border-gray-200 text-center">
-        <p className="text-gray-400 text-sm">Aún no hay cursos creados</p>
-        <button onClick={() => setSeccion('cursos')} className="mt-3 text-sm text-blue-600 hover:underline">
-          Crear primer curso →
-        </button>
-      </div>
-    ) : (
+      {cursos.length === 0 ? (
+        <div className="bg-white rounded-xl p-8 border border-gray-200 text-center">
+          <p className="text-gray-400 text-sm">Aún no hay capacitaciones creadas</p>
+          <button onClick={() => setSeccion('capacitacion')} className="mt-3 text-sm text-blue-600 hover:underline">
+            Crear primera capacitación →
+          </button>
+        </div>
+      ) : (
       <div className="flex flex-col gap-4">
-        {cursos.map(curso => {
+        {capacitacionesEmpresa.map(curso => {
           const asigCurso = asignaciones.filter(a => a.curso_id === curso.id)
           const completaron = asigCurso.filter(a => a.completado)
           const pendientes = asigCurso.filter(a => a.completado)
@@ -540,7 +551,7 @@ async function descargarReportePorEmpleado() {
             <div key={curso.id} className="bg-white rounded-xl border border-gray-200 overflow-hidden">
               <div className="p-5">
                 <div className="flex justify-between items-center mb-3">
-                  <p className="font-medium text-gray-800">{curso.titulo}</p>
+                  <p className="font-medium text-gray-800">{curso.nombre || curso.titulo}</p>
                   <span className="text-sm font-semibold text-blue-600">{pctCompletado}%</span>
                 </div>
 
@@ -645,6 +656,8 @@ async function descargarReportePorEmpleado() {
               </button>
             </div>
 
+            
+
             {mostrarFormEmp && (
               <div className="bg-white rounded-xl p-5 border border-blue-200 flex flex-col gap-3">
                 <p className="font-medium text-gray-800">Agregar empleado</p>
@@ -702,26 +715,26 @@ async function descargarReportePorEmpleado() {
                       <div className="border-t border-gray-100 pt-3">
                         <p className="text-xs text-gray-500 mb-2">Cursos asignados:</p>
                         <div className="flex flex-wrap gap-2">
-                          {cursos.map(curso => {
+                          {capacitacionesEmpresa.map(cap => {
                             const tieneAsig = asignaciones.find(
-                              a => a.empleado_id === emp.id && a.curso_id === curso.id
+                              a => a.empleado_id === emp.id && a.curso_id === cap.id
                             )
                             return (
                               <button
-                                key={curso.id}
-                                onClick={() => toggleAsignacion(emp.id, curso.id)}
+                                key={cap.id}
+                                onClick={() => toggleAsignacion(emp.id, cap.id)}
                                 className={`px-3 py-1 rounded-full text-xs font-medium transition ${
                                   tieneAsig
                                     ? 'bg-blue-600 text-white'
                                     : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
                                 }`}
                               >
-                                {tieneAsig ? '✓ ' : '+ '}{curso.titulo}
+                                {tieneAsig ? '✓ ' : '+ '}{cap.nombre}
                               </button>
                             )
                           })}
-                          {cursos.length === 0 && (
-                            <p className="text-xs text-gray-400">Crea cursos primero</p>
+                          {capacitacionesEmpresa.length === 0 && (
+                            <p className="text-xs text-gray-400">Crea capacitaciones primero</p>
                           )}
                         </div>
                       </div>
@@ -761,229 +774,10 @@ async function descargarReportePorEmpleado() {
               </div>
             )}
           </div>
+
+          
         )}
 
-        {/* CURSOS */}
-        {seccion === 'cursos' && (
-  <div className="flex flex-col gap-4">
-    <div className="flex justify-between items-center">
-      <h2 className="text-xl font-semibold text-gray-800">Cursos</h2>
-      <button
-        onClick={() => setMostrarFormCurso(!mostrarFormCurso)}
-        className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition"
-      >
-        + Nuevo curso
-      </button>
-    </div>
-
-    {mostrarFormCurso && (
-      <div className="bg-white rounded-xl p-5 border border-blue-200 flex flex-col gap-4">
-        <p className="font-medium text-gray-800">Nuevo curso</p>
-        <input
-          type="text"
-          value={tituloCurso}
-          onChange={e => setTituloCurso(e.target.value)}
-          placeholder="Título del curso"
-          className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-        />
-        <textarea
-          value={descCurso}
-          onChange={e => setDescCurso(e.target.value)}
-          placeholder="Descripción (opcional)"
-          rows={3}
-          className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
-        />
-        <div className="flex gap-2">
-          <button
-            onClick={crearCurso}
-            disabled={creandoCurso || !tituloCurso.trim()}
-            className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50 transition"
-          >
-            {creandoCurso ? 'Guardando...' : 'Guardar curso'}
-          </button>
-          <button
-            onClick={() => setMostrarFormCurso(false)}
-            className="px-4 py-2 rounded-lg text-sm text-gray-500 hover:bg-gray-100 transition"
-          >
-            Cancelar
-          </button>
-        </div>
-      </div>
-    )}
-
-    {cursos.length === 0 && !mostrarFormCurso ? (
-      <div className="bg-white rounded-xl p-8 border border-gray-200 text-center">
-        <p className="text-gray-400 text-sm">Aún no hay cursos creados</p>
-      </div>
-    ) : (
-      <div className="flex flex-col gap-3">
-        {cursos.map(curso => {
-          const { total } = progresoCurso(curso.id)
-          const eval_ = evaluaciones[curso.id]
-          const mostrandoEval = cursoEvalAbierto === curso.id
-
-          return (
-            <div key={curso.id} className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-              {/* Info del curso */}
-              <div className="p-5">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <p className="font-medium text-gray-800">{curso.titulo}</p>
-                    {curso.descripcion && (
-                      <p className="text-sm text-gray-400 mt-1">{curso.descripcion}</p>
-                    )}
-                  </div>
-                  <span className="text-xs text-gray-400 ml-4">{total} asignados</span>
-                </div>
-
-                {/* Botones de evaluación */}
-                <div className="mt-4 flex gap-2">
-                  {!eval_ ? (
-                    <button
-                      onClick={() => setCursoEvalAbierto(mostrandoEval ? null : curso.id)}
-                      className="text-sm bg-amber-500 text-white px-4 py-1.5 rounded-lg hover:bg-amber-600 transition"
-                    >
-                      {mostrandoEval ? 'Cancelar' : 'Subir evaluación'}
-                    </button>
-                  ) : (
-                    <button
-                      onClick={() => setCursoEvalAbierto(mostrandoEval ? null : curso.id)}
-                      className="text-sm border border-gray-200 text-gray-600 px-4 py-1.5 rounded-lg hover:bg-gray-50 transition"
-                    >
-                      {mostrandoEval ? 'Ocultar evaluación' : 'Ver evaluación'}
-                    </button>
-                  )}
-                </div>
-              </div>
-
-              {/* Panel de evaluación */}
-              {mostrandoEval && (
-                <div className="border-t border-gray-100 p-5 bg-gray-50">
-                  {eval_ ? (
-                    // Mostrar evaluación existente (solo lectura)
-                    <div className="flex flex-col gap-4">
-                      <div className="flex items-center justify-between">
-                        <p className="text-sm font-medium text-gray-700">Evaluación del curso</p>
-                        <span className="text-xs bg-gray-200 text-gray-600 px-2 py-1 rounded-full">
-                          La evaluación no se puede modificar
-                        </span>
-                      </div>
-                      {eval_.preguntas.map((preg: any, pi: number) => (
-                        <div key={pi} className="bg-white rounded-xl p-4 border border-gray-200 flex flex-col gap-2">
-                          <p className="text-sm font-medium text-gray-800">{pi + 1}. {preg.pregunta}</p>
-                          <p className="text-xs text-gray-400">
-                            {preg.tipo === 'multiple' ? 'Opción múltiple' : 'Verdadero / Falso'}
-                          </p>
-                          <div className="flex flex-col gap-1 mt-1">
-                            {preg.opciones.map((op: string, oi: number) => (
-                              <div
-                                key={oi}
-                                className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm ${
-                                  preg.respuesta_correcta === oi
-                                    ? 'bg-green-50 text-green-700 font-medium'
-                                    : 'text-gray-600'
-                                }`}
-                              >
-                                {preg.respuesta_correcta === oi ? '✓' : '○'} {op}
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    // Formulario para subir evaluación
-                    <div className="flex flex-col gap-4">
-                      <p className="text-sm font-medium text-gray-700">Crear evaluación</p>
-
-                      {preguntasNuevas.map((preg, pi) => (
-                        <div key={pi} className="bg-white rounded-xl p-4 border border-gray-200 flex flex-col gap-3">
-                          <div className="flex items-center justify-between">
-                            <span className="text-xs font-medium text-gray-500">
-                              {preg.tipo === 'multiple' ? 'Opción múltiple' : 'Verdadero / Falso'}
-                            </span>
-                            <button
-                              onClick={() => eliminarPregunta(pi)}
-                              className="text-xs text-red-400 hover:text-red-600"
-                            >
-                              Eliminar
-                            </button>
-                          </div>
-                          <input
-                            type="text"
-                            value={preg.pregunta}
-                            onChange={e => actualizarPregunta(pi, 'pregunta', e.target.value)}
-                            placeholder="Escribe la pregunta"
-                            className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                          />
-                          <div className="flex flex-col gap-2">
-                            {preg.opciones.map((op: string, oi: number) => (
-                              <div key={oi} className="flex items-center gap-2">
-                                <input
-                                  type="radio"
-                                  name={`correcta-${pi}`}
-                                  checked={preg.respuesta_correcta === oi}
-                                  onChange={() => actualizarPregunta(pi, 'respuesta_correcta', oi)}
-                                  className="accent-blue-600"
-                                />
-                                {preg.tipo === 'multiple' ? (
-                                  <input
-                                    type="text"
-                                    value={op}
-                                    onChange={e => actualizarOpcion(pi, oi, e.target.value)}
-                                    placeholder={`Opción ${oi + 1}`}
-                                    className="flex-1 border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none"
-                                  />
-                                ) : (
-                                  <span className="text-sm text-gray-700">{op}</span>
-                                )}
-                              </div>
-                            ))}
-                            <p className="text-xs text-gray-400">Selecciona el círculo de la respuesta correcta</p>
-                          </div>
-                        </div>
-                      ))}
-
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => agregarPregunta('multiple')}
-                          className="flex-1 border border-dashed border-gray-300 text-gray-500 rounded-lg py-2 text-sm hover:border-blue-400 hover:text-blue-600 transition"
-                        >
-                          + Opción múltiple
-                        </button>
-                        <button
-                          onClick={() => agregarPregunta('verdadero_falso')}
-                          className="flex-1 border border-dashed border-gray-300 text-gray-500 rounded-lg py-2 text-sm hover:border-blue-400 hover:text-blue-600 transition"
-                        >
-                          + Verdadero / Falso
-                        </button>
-                      </div>
-
-                      {preguntasNuevas.length > 0 && (
-                        <div className="flex flex-col gap-2">
-                            <p className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
-                            ⚠ Una vez guardada, la evaluación no se podrá modificar.
-                            </p>
-                            <button
-                            onClick={() => subirEvaluacion(curso.id)}
-                            disabled={creandoCurso}
-                            className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50 transition"
-                            >
-                            {creandoCurso ? 'Guardando...' : 'Guardar evaluación'}
-                            </button>
-                        </div>
-                        )}
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          )
-        })}
-      </div>
-    )}
-  </div>
-)}
       </div>
 
       {seccion === 'reportes' && (

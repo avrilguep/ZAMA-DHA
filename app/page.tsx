@@ -7,8 +7,6 @@ import './inicio.css'
 const CLAVE = process.env.NEXT_PUBLIC_CLAVE_ACCESO || ''
 const DIAS_VALIDO = 6
 
-const VERSION = 'v2'
-
 const planes = [
   {
     nombre: 'Básico',
@@ -65,30 +63,23 @@ export default function Bienvenida() {
   const router = useRouter()
 
   useEffect(() => {
-  const accesoVersion = localStorage.getItem('acceso_version')
-  const acceso = localStorage.getItem('acceso_fecha')
-
-  if (!acceso || accesoVersion !== VERSION) {
-    localStorage.removeItem('acceso_fecha')
-    localStorage.removeItem('acceso_version')
-    return
-  }
-
-  const diasPasados = (new Date().getTime() - new Date(acceso).getTime()) / (1000 * 60 * 60 * 24)
-  if (diasPasados < DIAS_VALIDO) {
-    router.push('/rol')
-  }
-}, [])
+    const acceso = localStorage.getItem('acceso_fecha')
+    if (acceso) {
+      const fechaAcceso = new Date(acceso)
+      const ahora = new Date()
+      const diasPasados = (ahora.getTime() - fechaAcceso.getTime()) / (1000 * 60 * 60 * 24)
+      if (diasPasados < DIAS_VALIDO) router.push('/rol')
+    }
+  }, [])
 
   function handleEntrar() {
-  if (clave === CLAVE) {
-    localStorage.setItem('acceso_fecha', new Date().toISOString())
-    localStorage.setItem('acceso_version', VERSION)
-    router.push('/rol')
-  } else {
-    setError('Contraseña incorrecta')
+    if (clave === CLAVE) {
+      localStorage.setItem('acceso_fecha', new Date().toISOString())
+      router.push('/rol')
+    } else {
+      setError('Contraseña incorrecta')
+    }
   }
-}
 
   return (
     <div className="landing-bg">

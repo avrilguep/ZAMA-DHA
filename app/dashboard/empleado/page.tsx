@@ -51,12 +51,13 @@ export default function EmpleadoDashboard() {
 
     const cursosData = await Promise.all(
       asigData.map(async a => {
-        const cursoDoc = await getDoc(doc(db, 'cursos', a.curso_id))
-        return {
-          id: cursoDoc.id,
-          asignacion_id: a.id,
-          completado: a.completado,
-          ...cursoDoc.data()
+        const cursoDoc = await getDoc(doc(db, 'capacitaciones', a.curso_id))
+        return { 
+          id: cursoDoc.id, 
+          asignacion_id: a.id, 
+          completado: a.completado, 
+          titulo: cursoDoc.data()?.nombre, 
+          ...cursoDoc.data() 
         }
       })
     )
@@ -236,16 +237,55 @@ export default function EmpleadoDashboard() {
           <div className="flex flex-col gap-4">
             <h2 className="text-xl font-semibold text-gray-800">Mis cursos</h2>
             {cursosPendientes.map(curso => (
-              <div key={curso.id} className="bg-white rounded-xl p-5 border border-gray-200">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="font-medium text-gray-800">{curso.titulo}</p>
-                    {curso.descripcion && (
-                      <p className="text-sm text-gray-400 mt-1">{curso.descripcion}</p>
-                    )}
-                  </div>
-                  <span className="text-xs bg-amber-100 text-amber-700 px-2 py-1 rounded-full">Pendiente</span>
-                </div>
+  <div key={curso.id} className="bg-white rounded-xl p-5 border border-gray-200">
+    <div className="flex items-center justify-between mb-3">
+      <div>
+        <p className="font-medium text-gray-800">{curso.titulo || curso.nombre}</p>
+        {curso.objetivo && (
+          <p className="text-sm text-gray-400 mt-1">{curso.objetivo}</p>
+        )}
+      </div>
+      <span className="text-xs bg-amber-100 text-amber-700 px-2 py-1 rounded-full">Pendiente</span>
+    </div>
+
+    <div className="grid grid-cols-2 gap-2 mb-4">
+      {curso.fecha && (
+        <div className="bg-gray-50 rounded-lg px-3 py-2">
+          <p className="text-xs text-gray-400">Fecha</p>
+          <p className="text-sm font-medium text-gray-700">{curso.fecha}</p>
+        </div>
+      )}
+      {(curso.horaInicio || curso.horaFin) && (
+        <div className="bg-gray-50 rounded-lg px-3 py-2">
+          <p className="text-xs text-gray-400">Horario</p>
+          <p className="text-sm font-medium text-gray-700">{curso.horaInicio} - {curso.horaFin}</p>
+        </div>
+      )}
+      {curso.duracion && (
+        <div className="bg-gray-50 rounded-lg px-3 py-2">
+          <p className="text-xs text-gray-400">Duración</p>
+          <p className="text-sm font-medium text-gray-700">{curso.duracion} horas</p>
+        </div>
+      )}
+      {curso.instructor && (
+        <div className="bg-gray-50 rounded-lg px-3 py-2">
+          <p className="text-xs text-gray-400">Instructor</p>
+          <p className="text-sm font-medium text-gray-700">{curso.instructor}</p>
+        </div>
+      )}
+      {curso.modalidad && (
+        <div className="bg-gray-50 rounded-lg px-3 py-2">
+          <p className="text-xs text-gray-400">Modalidad</p>
+          <p className="text-sm font-medium text-gray-700">{curso.modalidad}</p>
+        </div>
+      )}
+      {curso.departamento && (
+        <div className="bg-gray-50 rounded-lg px-3 py-2">
+          <p className="text-xs text-gray-400">Departamento</p>
+          <p className="text-sm font-medium text-gray-700">{curso.departamento}</p>
+        </div>
+      )}
+    </div>
                 <button
                   onClick={() => completarCurso(curso.id, curso.asignacion_id)}
                   className="mt-4 w-full bg-teal-600 text-white rounded-lg py-2 text-sm font-medium hover:bg-teal-700 transition"

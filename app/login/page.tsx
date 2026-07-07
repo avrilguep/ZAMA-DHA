@@ -38,6 +38,9 @@ export default function LoginPage() {
       if (modo === 'registro') {
         const { user } = await createUserWithEmailAndPassword(auth, email, password)
 
+        // Esperar a que Firebase reconozca la sesión
+        await new Promise(resolve => setTimeout(resolve, 1000))
+
         await setDoc(doc(db, 'perfiles', user.uid), {
           uid: user.uid,
           email,
@@ -83,7 +86,7 @@ export default function LoginPage() {
         await setDoc(doc(db, 'empleados', user.uid), {
             uid: user.uid,
             nombre,
-            email,
+            email: email.toLowerCase(),
             departamento,
             empresa_id,
             creado_at: new Date()

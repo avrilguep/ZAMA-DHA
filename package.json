@@ -19,7 +19,9 @@
     "postcss": "^8.5.15",
     "react": "19.2.4",
     "react-dom": "19.2.4",
-    "resend": "^6.16.0"
+    "recharts": "^3.9.2",
+    "resend": "^6.16.0",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.3.1",
